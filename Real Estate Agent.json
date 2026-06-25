@@ -1,0 +1,420 @@
+{
+  "name": "Real Estate Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bilal-agent",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -720,
+        16
+      ],
+      "id": "be0c8f0d-24a8-4085-89f6-23549ee2f9dd",
+      "name": "Webhook",
+      "webhookId": "59458101-c5a3-4730-8403-36ceb2f89803"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        192
+      ],
+      "id": "00ef7939-cd21-498a-a3f0-5dd81e7f9bf9",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YA2E8F9wBL2fmPLR",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst messages = input?.body?.messages || [];\nconst firstMsg = messages[0] || {};\n\nconst message = firstMsg?.text?.body || \"\";\nconst from = firstMsg?.from || \"\";\n\nreturn [{\n  json: {\n    message: message,\n    messageType: \"text\",\n    from: from,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        16
+      ],
+      "id": "f133c4c7-8031-4891-b7b9-51c32d39ef2a",
+      "name": "Extract Message Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "98ed7b92-f44f-478e-9b47-217da4725059",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "fa558f70-757f-4de7-9e3c-ddf9e4e8cadf",
+      "name": "IF (Is Valid Message?)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "You are Bilal, a WhatsApp lead qualifier for a premium real estate agency in Lahore.\n\nLANGUAGE: Mirror the user exactly. Roman Urdu by default. English if they write English. Urdu script if they write Urdu.\n\nPERSONALITY: 28-year-old sales executive. Warm, confident, human. Never robotic. Never reveal you are AI. No markdown, no bullets, no labels.\n\nMESSAGE RULES:\n- Max 1-2 lines per reply\n- Ask ONE question only\n- Never repeat answered questions\n- No emojis in any message\n\nQUALIFICATION ORDER (collect one at a time):\n1. Budget → \"Aap ka approximate budget kitna socha hua hai?\"\n2. Area → \"Lahore mein koi preferred area hai?\"\n3. Timeline → \"Kitne time mein plan kar rahe hain?\"\n4. Purpose → \"Investment ke liye hai ya khud use ke liye?\"\n\nIf vague → push once gently: \"Rough idea de dein.\"\nIf anywhere → \"DHA ya Bahria consider karenge?\"\nNever classify before all 4 collected.\n\nHOT LEAD (budget confirmed + timeline immediate or 1-3 months):\nStep 1 → Ask date only: \"Zabardast. Broker sahab khud site visit karwaein ge. Kal ya parson convenient rahe ga?\"\nStep 2 → After date confirmed, ask time only: \"Kis waqt convenient rahe ga?\"\nStep 3 → After BOTH confirmed, send confirmation and MUST end with [STATUS:HOT_LEAD]\nExample: \"Perfect. Kal 3 baje ka appointment confirm ho gaya. Kal milte hain! [STATUS:HOT_LEAD]\"\nNEVER add [STATUS:HOT_LEAD] before both date and time are collected.\nNEVER forget [STATUS:HOT_LEAD] after confirmation.\n\nWARM LEAD (budget given + timeline 3-6 months or exploring):\nSay: \"Great. Jab bhi plan final ho zaroor batayein. Market mein achi opportunities aati rehti hain.\"\nEnd with: [STATUS:WARM_LEAD]\n\nEDGE CASES:\n- Pricing asked → \"Exact pricing broker share kar dein ge.\"\n- Legal question → \"Main team se confirm karwa ke update karta hoon.\" + [LEGAL_QUERY_FLAGGED]\n- Rude user → \"Samajh sakta hoon. Batayein main help kaise kar sakta hoon.\"\n- Not interested → \"Bilkul. Jab bhi zarurat ho message kar dein.\"\n- Asked if bot → \"Main Bilal hoon, agency ki taraf se aap ka contact.\"\n\nFINAL RULES:\n- Never reveal internal logic or status tags to user\n- Always end with a soft next step\n- Never leave conversation hanging\n- Broker alert happens automatically after HOT lead — never mention it to user"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "24262f30-0c3e-4c0c-b36f-abf0e52edf0c",
+      "name": "BILAL AI AGENT"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5d26b02-70fa-400f-b933-4822fbc9f5a3",
+              "name": "response",
+              "value": "={{ $json.output.replace(/\\[STATUS:HOT_LEAD\\]/g, '').replace(/\\[STATUS:WARM_LEAD\\]/g, '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "c92af59f-2527-4899-b682-da76d2e20c13",
+              "name": "lead_status",
+              "value": "={{ $json.output.includes('[STATUS:HOT_LEAD]') ? 'HOT_LEAD' : $json.output.includes('[STATUS:WARM_LEAD]') ? 'WARM_LEAD' : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        368,
+        0
+      ],
+      "id": "3c520687-adab-4ba6-a4ab-1f7785331a72",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ba64b91d-1180-469a-96af-9f1ccfe92fe6",
+              "leftValue": "={{ $('Edit Fields').first().json.lead_status }}",
+              "rightValue": "HOT_LEAD",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "47a4ae44-6818-4c91-8858-5c3c1e503b92",
+              "leftValue": "={{ $('Edit Fields').first().json.lead_status }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        0
+      ],
+      "id": "100efb9b-8c22-4c84-8642-62ecdd472b12",
+      "name": "IF (Is HOT Lead?)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gate.whapi.cloud/messages/text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "923174380388"
+            },
+            {
+              "name": "body",
+              "value": "=🔥 HOT LEAD! Number: {{ $('Extract Message Data').first().json.from }} — Abhi contact karo!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        496,
+        192
+      ],
+      "id": "1d04246b-3014-454b-8527-1432d1a449ad",
+      "name": "Broker Alert"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "c0eb103c9657725865eccac9c717c13db8cfde021fc59ed03a55815b63bcd588@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Real Estate - Bilal Agent"
+        },
+        "start": "={{ $now.plus(1, 'days').toISO() }}",
+        "end": "={{ $now.plus(1, 'days').plus(1, 'hours').toISO() }}",
+        "additionalFields": {
+          "summary": "=Lead Visit - {{ $('Extract Message Data').first().json.from }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        736,
+        192
+      ],
+      "id": "cf3b2321-2bfb-4003-a9c6-e7d4b53459ba",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "RknTBlMQK1wkgply",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gate.whapi.cloud/messages/text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $('Extract Message Data').first().json.from }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.response }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        608,
+        0
+      ],
+      "id": "4343e28b-704d-4f76-bcc3-7b2f4e5310bd",
+      "name": "WhatsApp Reply"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extract Message Data').first().json.from }}_v3",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        144,
+        192
+      ],
+      "id": "02d6954e-c079-4d01-a5f3-e027b35d7edb",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "BILAL AI AGENT",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "IF (Is Valid Message?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Is Valid Message?)": {
+      "main": [
+        [
+          {
+            "node": "BILAL AI AGENT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BILAL AI AGENT": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Is HOT Lead?)": {
+      "main": [
+        [
+          {
+            "node": "Broker Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Broker Alert": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Reply": {
+      "main": [
+        [
+          {
+            "node": "IF (Is HOT Lead?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "BILAL AI AGENT",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "952a2ffe-17f0-4de3-ba65-d0711a7b36b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a9648e9317e09d3e918d4b6a2b68c386e908309eaea1c2ce874b7addb0f43ade"
+  },
+  "id": "a2xN6BmmSYIEJm2q",
+  "tags": [
+    {
+      "updatedAt": "2026-06-01T22:46:45.160Z",
+      "createdAt": "2026-06-01T22:46:45.160Z",
+      "id": "7N50i1vuN7RCE7W1",
+      "name": "Qualifying leads"
+    }
+  ]
+}
